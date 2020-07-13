@@ -1,4 +1,3 @@
-# coding: utf-8
 def get_NBA_result(game_id):
     web = requests.get(f'https://www.espn.com/nba/boxscore?gameId={game_id}')
     content = web.content
