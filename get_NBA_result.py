@@ -28,10 +28,10 @@ def get_NBA_result(game_id):
     team2.columns = column
     for c in team1.columns[1:]:
         for i in team1[c].values:
-            if len(str(i))>=10:
+            if str(i)[0].isalpha():
                 team1[c].replace({i: 0}, inplace=True)
         for i in team2[c].values:
-            if len(str(i))>=10:
+            if str(i)[0].isalpha():
                 team2[c].replace({i: 0}, inplace=True)
 
     team1.fillna(' ',inplace=True)
