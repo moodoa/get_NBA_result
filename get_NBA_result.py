@@ -38,3 +38,56 @@ def get_NBA_result(game_id):
     team2.fillna(' ',inplace=True)
     
     return title,game_result,team1,team2
+
+
+
+
+
+def po_dcard(account,password,title,content,tags):
+    driver = webdriver.Chrome()
+    driver.get('https://www.dcard.tw/f')
+    login = driver.find_element_by_xpath('//*[@id="__next"]/div[1]/div/div[2]/a/span') 
+    login.click()
+    time.sleep(1)
+    email = driver.find_element_by_xpath('//*[@id="__next"]/main/div/div/div/div[2]/div[1]/div[2]/div[3]/form/div[1]/label/div[2]/input')\
+    .send_keys(account)
+    password = driver.find_element_by_xpath('//*[@id="__next"]/main/div/div/div/div[2]/div[1]/div[2]/div[3]/form/div[2]/label/div[2]/input')\
+    .send_keys(password)
+    login_btn = driver.find_element_by_xpath('//*[@id="__next"]/main/div/div/div/div[2]/div[1]/div[2]/div[3]/form/button')\
+    .click()
+    time.sleep(7)
+    po_btn = driver.find_element_by_xpath('//*[@id="__next"]/div[1]/div/div[2]/a[1]').click()
+    time.sleep(.5)
+    choose_forums = driver.find_element_by_xpath('//*[@id="__next"]/main/form/div[2]/div[1]/div/div').click()
+    time.sleep(.5)
+    forum1 = driver.find_element_by_xpath('/html/body/div[2]/div/div[2]/div/div[2]/div/div/div[1]/div/div/div/div[1]/div/div').click()
+    time.sleep(.5)
+    identify = driver.find_element_by_xpath('//*[@id="__next"]/main/form/div[3]/div/div/div/div/div').click()
+    time.sleep(.5)
+    identify1 = driver.find_element_by_xpath('/html/body/div[2]/div/div/div/div/div/div[2]/div/button[3]/span[1]/div/div[2]/div').click()
+    time.sleep(.5)
+    title_bar = driver.find_element_by_xpath('//*[@id="__next"]/main/form/div[3]/textarea').send_keys(title)
+    time.sleep(.5)
+    content_area = driver.find_element_by_xpath('//*[@id="__next"]/main/form/div[4]/div/div/div/div[2]/div').send_keys(content)
+    time.sleep(.5)
+    next_step = driver.find_element_by_xpath('//*[@id="__next"]/main/form/div[5]/div/button').click()
+    time.sleep(.5)
+    tag_bar = driver.find_element_by_xpath('/html/body/div[2]/div/div[2]/div/div/div/div[1]/label/div/input')
+    time.sleep(.5)
+    for tag in tags:
+        tag_bar.send_keys(tag)
+        time.sleep(.5)
+        tag_bar.send_keys(Keys.ENTER)
+    time.sleep(.5)
+    post = driver.find_element_by_xpath('/html/body/div[2]/div/div[2]/div/div/footer/div[2]/div[2]/button').click()
+    return 'ok'
+
+def daily_post(gameid_start,games_today):
+        for gameid in range(gameid_start,gameid_start+games_today):
+            try:
+                title,game_result,team1,team2 = get_NBA_result(gameid)
+                content = str(game_result)+str(team1)+str(team2)+'(DCARD發文限制：文章內得要有十五個中文字以上。)'
+                po_dcard('account','password',str(title),content,['tag1','tag2'])
+            except:
+                time.sleep(10)
+                continue
