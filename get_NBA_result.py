@@ -1,3 +1,12 @@
+import requests
+import time
+import pandas as pd
+import numpy as np
+from bs4 import BeautifulSoup
+from selenium import webdriver
+
+
+
 def get_NBA_result(game_id):
     web = requests.get(f'https://www.espn.com/nba/boxscore?gameId={game_id}')
     content = web.content
