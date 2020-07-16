@@ -32,13 +32,13 @@
 python 3
 
 ## Usage
-`get data`
+`1.get data`
 
 ```
 title,game_result,team1,team2 = get_NBA_result(401161524)
 ```
 
-`content processing`
+`2.content processing`
 
 ```
 content = ''
@@ -47,7 +47,7 @@ content += (team_stat_to_table(team1)+'\n'+'\n')
 content += (team_stat_to_table(team2)+'\n'+'\n')
 ```
 
-`POST`
+`3.POST`
 
 ```
 po_article_api('your_forum',title,content,'your_tag1','your_tag2')
