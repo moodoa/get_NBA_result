@@ -16,7 +16,7 @@
 
 #### df_to_table.py
 * 將 `get_NBA_result` 所得到的兩隊數據 (Dataframe) 轉換成 Dcard PO 文排版。
-* Columns 縮減為 'Players', 'MIN', 'REB', 'AST', 'STL', 'BLK', 'PTS' 七項。
+* Columns 縮減為 `Players`, `MIN`, `REB`, `AST`, `STL`, `BLK`, `PTS` 七項。
 
 #### po_dcard_api.py
 * 將爬取到的數據、圖片連結加入 payload ，並以 Dcard API 發文。
