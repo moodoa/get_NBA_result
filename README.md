@@ -31,6 +31,27 @@
 ## Requirements
 python 3
 
+## Usage
+`get data`
+
+```
+title,game_result,team1,team2 = get_NBA_result(401161524)
+```
+
+`content processing`
+
+```
+content = ''
+content += (game_result_to_table(game_result)+'\n'+'\n')
+content += (team_stat_to_table(team1)+'\n'+'\n')
+content += (team_stat_to_table(team2)+'\n'+'\n')
+```
+
+`POST`
+
+```
+po_article_api('your_forum',title,content,'your_tag1','your_tag2')
+```
 ## Installation
 `pip install -r requriements.txt`
 
