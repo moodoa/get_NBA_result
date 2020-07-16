@@ -15,8 +15,9 @@
 * 需先至 Imgur 申請 `Client ID`。
 
 #### df_to_table.py
-* 將 `get_NBA_result` 所得到的兩隊數據 (Dataframe) 轉換成 Dcard PO 文排版。
-* Columns 縮減為 `Players`, `MIN`, `REB`, `AST`, `STL`, `BLK`, `PTS` 七項。
+* 將 `get_NBA_result` 所得到的數據 (Dataframe) 轉換成方便在 Dcard 上閱讀的排版。
+* `team_statistic_to_table` 處理隊伍數據，Columns 縮減為 `Players`, `MIN`, `REB`, `AST`, `STL`, `BLK`, `PTS` 七項，轉換成全形排版後輸出。
+* `game_result_to_table` 處理每節得分，轉換成全形排版後輸出。
 
 #### po_dcard_api.py
 * 將爬取到的數據、圖片連結加入 payload ，並以 Dcard API 發文。
