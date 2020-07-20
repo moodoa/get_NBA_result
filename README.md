@@ -35,16 +35,21 @@ python 3
 `1.po_dcard_functions`
 
 ```
-`1.get data:`
+1.get data:
+
 title,game_result,team1,team2 = get_NBA_result(401161524)
 
-`2.content processing:`
+
+2.content processing:
+
 content = ''
 content += (game_result_to_table(game_result)+'\n'+'\n')
 for write_in in (team1,team2):
     content += (team_stat_to_table(write_in)+'\n'+'\n')
 
-`3.post on dcard:`
+
+3.post on dcard:
+
 po_article_api('your_forum',title,content,'your_tag1','your_tag2')
 
 ```
@@ -53,9 +58,12 @@ po_article_api('your_forum',title,content,'your_tag1','your_tag2')
 
 ```
 1.get news list:
+
 today_news_ids = get_today_news_list()
 
-2.get news from list
+
+2.get news from list:
+
 for today_news_id in today_news_ids:
     try:
         title,author,article_content = get_news(today_news_id)
