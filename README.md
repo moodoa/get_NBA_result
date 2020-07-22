@@ -58,7 +58,7 @@ game_result.to_json('game_result',orient='records')
 team1.to_json('team1_result',orient='records')
 team2.to_json('team2_result',orient='records')
 
-
+ 
 3.post on dcard:
 
 po_article_api('your_forum',title,content,'your_tag1','your_tag2')
