@@ -23,6 +23,10 @@
 * 將爬取到的數據、圖片連結加入 payload ，並以 Dcard API 發文。
 * 需先和 Dcard 人員申請 Token。
 
+#### get_stat_daily.py
+* 從ESPN取得今日對戰組合的 `game_id` (美國時間)。
+* 依照今日對戰組合的 `game_id` 爬取數據，若數據尚未更新則設定 60 秒後再爬一次。
+
 ## get_news_functions
 #### get_today_news.py
 * `get_today_news_list` 此 function 爬取每日頭條新聞的編號。
