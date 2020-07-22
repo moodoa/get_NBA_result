@@ -24,8 +24,8 @@
 * 需先和 Dcard 人員申請 Token。
 
 #### get_stat_daily.py
-* 從ESPN取得今日對戰組合的 `game_id` (美國時間)。
-* 依照今日對戰組合的 `game_id` 爬取數據，若數據尚未更新則設定 60 秒後再爬一次。
+* `get_game_id_daily` 從ESPN取得今日對戰組合的 `game_id` (美國時間)。
+* `get_stat_daily` 依照今日對戰組合的 `game_id` 爬取數據，若數據尚未更新則設定 60 秒後再爬一次。
 
 ## get_news_functions
 #### get_today_news.py
@@ -41,6 +41,8 @@ python 3
 ```
 1.get data:
 
+game_today = get_game_id_daily()
+get_stat_daily(game_today) ← final version haven't decided yet.
 title,game_result,team1,team2 = get_NBA_result(401161524)
 
 

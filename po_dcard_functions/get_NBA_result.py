@@ -52,7 +52,7 @@ def get_NBA_result(game_id):
 
 
 
-def po_dcard(account,password,title,content,tags):
+def po_dcard(account, password, title, content, tags):
     driver = webdriver.Chrome()
     driver.get('https://www.dcard.tw/f')
     login = driver.find_element_by_xpath('//*[@id="__next"]/div[1]/div/div[2]/a/span') 
@@ -91,7 +91,7 @@ def po_dcard(account,password,title,content,tags):
     post = driver.find_element_by_xpath('/html/body/div[2]/div/div[2]/div/div/footer/div[2]/div[2]/button').click()
     return 'ok'
 
-def daily_post(gameid_start,games_today):
+def daily_post(gameid_start, games_today):
         for gameid in range(gameid_start,gameid_start+games_today):
             try:
                 title,game_result,team1,team2 = get_NBA_result(gameid)
