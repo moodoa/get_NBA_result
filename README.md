@@ -44,12 +44,19 @@ python 3
 title,game_result,team1,team2 = get_NBA_result(401161524)
 
 
-2.content processing:
+2-1.content processing:
 
 content = ''
 content += (game_result_to_table(game_result)+'\n'+'\n')
 for write_in in (team1,team2):
     content += (team_stat_to_table(write_in)+'\n'+'\n')
+
+
+or 2-2. dateframe to json:
+
+game_result.to_json('game_result',orient='records')
+team1.to_json('team1_result',orient='records')
+team2.to_json('team2_result',orient='records')
 
 
 3.post on dcard:
