@@ -23,6 +23,10 @@
 * 將爬取到的數據、圖片連結加入 payload ，並以 Dcard API 發文。
 * 需先和 Dcard 人員申請 Token。
 
+#### get_stat_daily.py
+* `get_game_id_daily` 從ESPN取得今日對戰組合的 `game_id` (美國時間)。
+* `get_stat_daily` 依照今日對戰組合的 `game_id` 爬取數據，若數據尚未更新則設定 60 秒後再爬一次。
+
 ## get_news_functions
 #### get_today_news.py
 * `get_today_news_list` 此 function 爬取每日頭條新聞的編號。
@@ -37,10 +41,12 @@ python 3
 ```
 1.get data:
 
+game_today = get_game_id_daily()
+get_stat_daily(game_today) ← final version haven't decided yet.
 title,game_result,team1,team2 = get_NBA_result(401161524)
 
 
-2.content processing:
+2-1.content processing:
 
 content = ''
 content += (game_result_to_table(game_result)+'\n'+'\n')
@@ -48,6 +54,13 @@ for write_in in (team1,team2):
     content += (team_stat_to_table(write_in)+'\n'+'\n')
 
 
+or 2-2. dateframe to json:
+
+game_result.to_json('game_result',orient='records')
+team1.to_json('team1_result',orient='records')
+team2.to_json('team2_result',orient='records')
+
+ 
 3.post on dcard:
 
 po_article_api('your_forum',title,content,'your_tag1','your_tag2')
