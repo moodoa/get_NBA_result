@@ -5,8 +5,8 @@ import datetime
 from bs4 import BeautifulSoup
 
 def get_game_id_daily():
-    us_dt = datetime.datetime.now().astimezone(tz_america)
-    today = str(us_dt.year)+'{:0>2d}'.format(us_dt.month)+'{:0>2d}'.format(us_dt.day)
+    central_time = datetime.datetime.now() + datetime.timedelta(hours=-13)
+    today = str(central_time.year)+'{:0>2d}'.format(central_time.month)+'{:0>2d}'.format(central_time.day)
     url = f'https://www.espn.com/nba/scoreboard/_/date/{today}'
     content = requests.get(url).content
     soup = BeautifulSoup(content,'html.parser')
