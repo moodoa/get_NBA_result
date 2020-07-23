@@ -125,6 +125,8 @@ def po_dcard(account, password, title, content, tags):
     post = driver.find_element_by_xpath('/html/body/div[2]/div/div[2]/div/div/footer/div[2]/div[2]/button').click()
     return 'ok'
 
+
+
 def daily_post(gameid_start, games_today):
         for gameid in range(gameid_start,gameid_start+games_today):
             try:
