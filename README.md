@@ -27,6 +27,9 @@
 * `get_game_id_daily` 從ESPN取得今日對戰組合的 `game_id` (美國時間)。
 * `get_stat_daily` 依照今日對戰組合的 `game_id` 爬取數據，若數據尚未更新則設定 60 秒後再爬一次。
 
+#### statistics_to_json.py
+* `statistics_to_json` 直接將爬取到的數據分成主客場後，轉成 JSON 檔輸出。
+
 ## get_news_functions
 #### get_today_news.py
 * `get_today_news_list` 此 function 爬取每日頭條新聞的編號。
