@@ -38,8 +38,8 @@ def statistics_to_json(game_id):
     column[0] = 'Players'
     team1.columns = column
     team2.columns = column
-    team1.fillna(' ',inplace=True)
-    team2.fillna(' ',inplace=True)
+    team1.fillna('',inplace=True)
+    team2.fillna('',inplace=True)
     def df_process(df):
         df['Players'] = df['Players'].apply(lambda x:x.split('/')[0])
         df['DNP'] = df['MIN'].apply(lambda x: True if x[:3]=='DNP' else False)
