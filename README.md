@@ -42,6 +42,8 @@ python 3
 `1.get box score`
 
 ```
+statfinder.py
+
 if __name__ == '__main__':
     finder = StatFinder('20200808') ← 今日日期
     finder.receive() ← 比賽數據
