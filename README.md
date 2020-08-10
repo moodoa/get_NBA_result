@@ -39,34 +39,12 @@
 python 3
 
 ## Usage
-`1.po_dcard_functions`
+`1.get box score`
 
 ```
-1.get data:
-
-game_today = get_game_id_daily()
-get_stat_daily(game_today) ← final version haven't decided yet.
-title,game_result,team1,team2 = get_NBA_result(401161524)
-
-
-2-1.content processing:
-
-content = ''
-content += (game_result_to_table(game_result)+'\n'+'\n')
-for write_in in (team1,team2):
-    content += (team_stat_to_table(write_in)+'\n'+'\n')
-
-
-or 2-2. dateframe to json:
-
-game_result.to_json('game_result',orient='records')
-team1.to_json('team1_result',orient='records')
-team2.to_json('team2_result',orient='records')
-
- 
-3.post on dcard:
-
-po_article_api('your_forum',title,content,'your_tag1','your_tag2')
+if __name__ == '__main__':
+    finder = StatFinder('20200808') ← 今日日期
+    finder.receive() ← 比賽數據
 
 ```
 

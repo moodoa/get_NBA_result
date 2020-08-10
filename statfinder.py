@@ -18,17 +18,19 @@ class StatFinder():
             (game_id, 0)
             for game_id in game_ids
         ]
+        all_game_stats = []
         while len(game_tuples) > 0:
             game_id, retry_time = game_tuples.pop(0)
             if retry_time >= 3:
                 continue
             if self._is_final(game_id):
                 game_stats = self._get_game_stats(game_id)
+                all_game_stats.append(game_stats)
             else:
                 print((game_id, retry_time + 1))
                 game_tuples.append((game_id, retry_time + 1))
                 continue
-        return game_stats
+        return all_game_stats
 
     def _get_game_ids(self):
         content = requests.get(f"{self.site_url}/nba/schedule/_/date/{self.date}").content
