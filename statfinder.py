@@ -34,9 +34,20 @@ class StatFinder():
 
     def _get_game_ids(self):
         content = requests.get(f"{self.site_url}/nba/schedule/_/date/{self.date}").content
-        today_schedule = str(content).split('<h2 class="table-caption">')[1]
-        pattern = r"/nba/game\?gameId=(\d+)"
-        game_ids = re.findall(pattern, today_schedule)
+        soup = BeautifulSoup(content,'html.parser')
+        sched_container = soup.find(name='div', attrs={'id':'sched-container'})
+        today_game_id_html = []
+        for tag in sched_container:
+            if len(today_game_id_html) != 0 and tag.name == 'h2':
+                break
+            elif tag.attrs == {'class': ['responsive-table-wrap']}:
+                today_game_id_html.append(tag)
+        game_ids = []
+        for idx in range(len(today_game_id_html)):
+            elements = today_game_id_html[idx].select("a")
+            for element in elements:
+                if '/nba/game?gameId=' in element.attrs["href"]:
+                    game_ids.append(element.attrs["href"].split('=')[1])
         return game_ids
 
     def _is_final(self, game_id):
