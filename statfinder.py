@@ -34,10 +34,9 @@ class StatFinder():
 
     def _get_game_ids(self):
         content = requests.get(f"{self.site_url}/nba/schedule/_/date/{self.date}").content
-        soup = BeautifulSoup(content,'html.parser')
-        html = soup.find(name='table',attrs={'class':'schedule'})
+        today_schedule = str(content).split('<h2 class="table-caption">')[1]
         pattern = r"/nba/game\?gameId=(\d+)"
-        game_ids = list(set(re.findall(pattern, str(html))))
+        game_ids = re.findall(pattern, today_schedule)
         return game_ids
 
     def _is_final(self, game_id):
