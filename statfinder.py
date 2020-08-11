@@ -144,9 +144,11 @@ class StatFinder():
         return results
 
     def _set_highlight(self, df):
-        for column in ["MIN", "FG", "3PT", "FT", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "+/-", "PTS"]:
+        for column in ["Players", "MIN", "FG", "3PT", "FT", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "+/-", "PTS"]:
             if column == 'MIN':
                 df[column] = df[column].apply(lambda x : {"text":x, "highlight":"good"} if str(x).isdigit() and int(x) > 40 else {"text":x, "highlight":""})
+            elif column == 'Players':
+                df[column] == df[column].apply(lambda x: {"text":x, "highlight":self._is_triple_double(x, df)})
             elif column == 'FG':
                 df[column] = df[column].apply(lambda x: {"text":x, "highlight":self._get_fg_highlight(x)})
             elif column == '3PT':
@@ -167,39 +169,41 @@ class StatFinder():
                 df[column] = df[column].apply(lambda x: {"text": x, "highlight":""})
         return df
 
+    def _is_triple_double(self, player, df):
+        positive_stat = []
+        for column in ['REB', 'AST', 'STL', 'BLK', 'PTS']:
+            #TODO ValueError: invalid literal for int() with base 10: "DNP-COACH'S DECISION"
+            positive_stat.append(int(df[df['Players'] == player][column].values[0]))
+        count = 0 
+        for stat in positive_stat:
+            if stat >= 10:
+                count +=1
+        return 'good' if count >= 3 else ''
+
     def _is_percentage(self, shoot_made_attempted):
         if shoot_made_attempted[0].isdigit() and '-' in shoot_made_attempted:
             attempted = int(shoot_made_attempted.split('-')[1])
-            if attempted > 0 :
-                return True
-            else:
-                return False
+            return True if attempted > 0 else False
     
     def _get_fg_highlight(self, shoot_made_attempted):
         if self._is_percentage(shoot_made_attempted):
             made = int(shoot_made_attempted.split('-')[0])
             attempted = int(shoot_made_attempted.split('-')[1])
-            if made/attempted >= 0.5:
+            if made/attempted >= 0.7:
                 return 'good'
             elif made/attempted < 0.3:
                 return 'bad'
-            else:
-                return ''
-        else:
-            return ''
+        return ''
 
     def _get_3pt_highlight(self, shoot_made_attempted):
         if self._is_percentage(shoot_made_attempted):
             made = int(shoot_made_attempted.split('-')[0])
             attempted = int(shoot_made_attempted.split('-')[1])
-            if made/attempted >= 0.4:
+            if made/attempted >= 0.5:
                 return 'good'
             elif made/attempted <= 0.2:
                 return 'bad'
-            else:
-                return ''
-        else:
-            return ''
+        return ''
 
     def _get_ft_highlight(self, shoot_made_attempted):
         if self._is_percentage(shoot_made_attempted):
@@ -209,19 +213,13 @@ class StatFinder():
                 return 'good'
             elif made/attempted <= 0.5:
                 return 'bad'
-            else:
-                return ''
-        else:
-            return ''
+        return ''
 
     def _get_stat_highlight(self, stat):
         if str(stat).isdigit():
             if int(stat) >= 10:
                 return 'good'
-            else:
-                return ''
-        else:
-            return ''
+        return ''
     
     def _get_negative_stat_highlight(self, stat):
         if str(stat).isdigit():
@@ -229,19 +227,13 @@ class StatFinder():
                 return 'good'
             elif int(stat) >= 6:
                 return 'bad'
-            else:
-                return ''
-        else:
-            return ''
+        return ''
 
     def _get_points_highlight(self, points):
         if str(points).isdigit():
             if int(points) >= 30:
                 return 'good'
-            else:
-                return ''
-        else:
-            return ''
+        return ''
 
 if __name__ == '__main__':
     finder = StatFinder('20200808')
