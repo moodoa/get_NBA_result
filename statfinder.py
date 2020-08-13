@@ -34,37 +34,37 @@ class StatFinder():
 
     def _get_game_ids(self):
         content = requests.get(f"{self.site_url}/nba/schedule/_/date/{self.date}").content
-        soup = BeautifulSoup(content,'html.parser')
-        sched_container = soup.find(name='div', attrs={'id':'sched-container'})
+        soup = BeautifulSoup(content,"html.parser")
+        sched_container = soup.find(name="div", attrs={"id":"sched-container"})
         today_game_id_html = []
         for tag in sched_container:
-            if len(today_game_id_html) != 0 and tag.name == 'h2':
+            if len(today_game_id_html) != 0 and tag.name == "h2":
                 break
-            elif tag.attrs == {'class': ['responsive-table-wrap']}:
+            elif tag.attrs == {"class": ["responsive-table-wrap"]}:
                 today_game_id_html.append(tag)
         game_ids = []
         for idx in range(len(today_game_id_html)):
             elements = today_game_id_html[idx].select("a")
             for element in elements:
-                if '/nba/game?gameId=' in element.attrs["href"]:
-                    game_ids.append(element.attrs["href"].split('=')[1])
+                if "/nba/game?gameId=" in element.attrs["href"]:
+                    game_ids.append(element.attrs["href"].split("=")[1])
         return game_ids
 
     def _is_final(self, game_id):
         try:
-            content = requests.get(f'{self.site_url}/nba/boxscore?gameId={game_id}').content
-            soup = BeautifulSoup(content, 'html.parser')
-            status_detail = soup.find(name='span', attrs={'class':'status-detail'}).text
+            content = requests.get(f"{self.site_url}/nba/boxscore?gameId={game_id}").content
+            soup = BeautifulSoup(content, "html.parser")
+            status_detail = soup.find(name="span", attrs={"class":"status-detail"}).text
         except:
             return False
-        return status_detail[:5] == 'Final'
+        return status_detail[:5] == "Final"
 
     def _get_game_stats(self, game_id):
         stat_json = {}
         content = requests.get(f"{self.site_url}/nba/game?gameId={game_id}").content
-        soup = BeautifulSoup(content, 'html.parser')
-        z_time = soup.find(name='div', attrs={"class":"game-date-time"}).span['data-date']
-        stat_json['game_time'] = z_time
+        soup = BeautifulSoup(content, "html.parser")
+        z_time = soup.find(name="div", attrs={"class":"game-date-time"}).span["data-date"]
+        stat_json["game_time"] = z_time
         away_quarter_score, home_quarter_score = self._get_quarter_score(game_id)
         
         url = f"{self.site_url}/nba/boxscore?gameId={game_id}"
@@ -92,19 +92,19 @@ class StatFinder():
         away.update({"players": self._set_dnp_starter_status(team_away), "team_score": away_quarter_score})
         home.update({"players": self._set_dnp_starter_status(team_home), "team_score": home_quarter_score})
 
-        stat_json['away'] = away
-        stat_json['home'] = home
+        stat_json["away"] = away
+        stat_json["home"] = home
 
         return stat_json
 
     def _get_quarter_score(self, game_id):
-        content = requests.get(f'https://www.espn.com/nba/boxscore?gameId={game_id}').content
-        soup = BeautifulSoup(content,'html.parser')
-        html = soup.find(name='div' , attrs={'class':'game-status'})
+        content = requests.get(f"https://www.espn.com/nba/boxscore?gameId={game_id}").content
+        soup = BeautifulSoup(content,"html.parser")
+        html = soup.find(name="div" , attrs={"class":"game-status"})
         score = pd.read_html(str(html))[0]
-        score = score.rename(columns={'Unnamed: 0':'team','1':'1ST','2':'2ND','3':'3RD','4':'4TH','T':'TOT'})
-        score = score.drop(columns='team')
-        team_score = json.loads(score.to_json(orient='records'))
+        score = score.rename(columns={"Unnamed: 0":"team","1":"1ST","2":"2ND","3":"3RD","4":"4TH","T":"TOT"})
+        score = score.drop(columns="team")
+        team_score = json.loads(score.to_json(orient="records"))
         return team_score[0], team_score[1] 
 
     def _team_score_streak(self, soup, game_result, index):
@@ -234,6 +234,6 @@ class StatFinder():
                 return "good"
         return ""
 
-if __name__ == '__main__':
-    finder = StatFinder('20200808')
+if __name__ == "__main__":
+    finder = StatFinder("20200808")
     print(finder.receive())
