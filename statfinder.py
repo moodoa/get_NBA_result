@@ -144,96 +144,95 @@ class StatFinder():
         return results
 
     def _set_highlight(self, df):
+        players_df = df.iloc[:-2]
+        total_df = df.iloc[-2:]
         for column in ["Players", "MIN", "FG", "3PT", "FT", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "+/-", "PTS"]:
-            if column == 'MIN':
-                df[column] = df[column].apply(lambda x : {"text":x, "highlight":"good"} if str(x).isdigit() and int(x) > 40 else {"text":x, "highlight":""})
-            elif column == 'Players':
-                df[column] == df[column].apply(lambda x: {"text":x, "highlight":self._is_triple_double(x, df)})
-            elif column == 'FG':
-                df[column] = df[column].apply(lambda x: {"text":x, "highlight":self._get_fg_highlight(x)})
-            elif column == '3PT':
-                df[column] = df[column].apply(lambda x: {"text":x, "highlight":self._get_3pt_highlight(x)})
-            elif column == 'FT':
-                df[column] = df[column].apply(lambda x: {"text":x, "highlight":self._get_ft_highlight(x)})
-            elif column in ['OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK']:
-                players_df = df.iloc[:-2]
-                total_df = df.iloc[-2:]
+            if column == "MIN":
+                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":"good"} if str(x).isdigit() and int(x) > 40 else {"text":x, "highlight":""})
+            elif column == "Players":
+                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._is_triple_double(x, players_df)})
+            elif column == "FG":
+                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_fg_highlight(x)})
+            elif column == "3PT":
+                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_3pt_highlight(x)})
+            elif column == "FT":
+                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_ft_highlight(x)})
+            elif column in ["OREB", "DREB", "REB", "AST", "STL", "BLK"]:
                 players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_stat_highlight(x)})
-                total_df[column] = total_df[column].apply(lambda x: {"text":x, "highlight": ""})
-                df = pd.concat([players_df, total_df])
-            elif column in ['TO', 'PF']:
-                df[column] = df[column].apply(lambda x: {"text":x, "highlight":self._get_negative_stat_highlight(x)})
-            elif column == 'PTS':
-                df[column] = df[column].apply(lambda x: {"text":x, "highlight":self._get_points_highlight(x)})
-            else:
-                df[column] = df[column].apply(lambda x: {"text": x, "highlight":""})
+            elif column in ["TO", "PF"]:
+                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_negative_stat_highlight(x)})
+            elif column == "PTS":
+                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_points_highlight(x)})
+        df = pd.concat([players_df, total_df])
         return df
 
     def _is_triple_double(self, player, df):
         positive_stat = []
-        for column in ['REB', 'AST', 'STL', 'BLK', 'PTS']:
-            #TODO ValueError: invalid literal for int() with base 10: "DNP-COACH'S DECISION"
-            positive_stat.append(int(df[df['Players'] == player][column].values[0]))
+        for column in ["REB", "AST", "STL", "BLK", "PTS"]:
+            try:
+                positive_stat.append(int(df[df["Players"] == player][column].values[0]))
+            except:
+                positive_stat.append(0)
         count = 0 
         for stat in positive_stat:
             if stat >= 10:
                 count +=1
-        return 'good' if count >= 3 else ''
+        return "good" if count >= 3 else ""
 
     def _is_percentage(self, shoot_made_attempted):
-        if shoot_made_attempted[0].isdigit() and '-' in shoot_made_attempted:
-            attempted = int(shoot_made_attempted.split('-')[1])
+        if shoot_made_attempted[0].isdigit() and "-" in shoot_made_attempted:
+            attempted = int(shoot_made_attempted.split("-")[1])
             return True if attempted > 0 else False
     
     def _get_fg_highlight(self, shoot_made_attempted):
         if self._is_percentage(shoot_made_attempted):
-            made = int(shoot_made_attempted.split('-')[0])
-            attempted = int(shoot_made_attempted.split('-')[1])
+            made = int(shoot_made_attempted.split("-")[0])
+            attempted = int(shoot_made_attempted.split("-")[1])
             if made/attempted >= 0.7:
-                return 'good'
+                return "good"
             elif made/attempted < 0.3:
-                return 'bad'
-        return ''
+                return "bad"
+        return ""
 
     def _get_3pt_highlight(self, shoot_made_attempted):
         if self._is_percentage(shoot_made_attempted):
-            made = int(shoot_made_attempted.split('-')[0])
-            attempted = int(shoot_made_attempted.split('-')[1])
+            made = int(shoot_made_attempted.split("-")[0])
+            attempted = int(shoot_made_attempted.split("-")[1])
             if made/attempted >= 0.5:
-                return 'good'
-            elif made/attempted <= 0.2:
-                return 'bad'
-        return ''
+                return "good"
+            elif made/attempted <= 0.25:
+                return "bad"
+        return ""
 
     def _get_ft_highlight(self, shoot_made_attempted):
         if self._is_percentage(shoot_made_attempted):
-            made = int(shoot_made_attempted.split('-')[0])
-            attempted = int(shoot_made_attempted.split('-')[1])
+            made = int(shoot_made_attempted.split("-")[0])
+            attempted = int(shoot_made_attempted.split("-")[1])
             if made/attempted >= 0.9:
-                return 'good'
+                return "good"
             elif made/attempted <= 0.5:
-                return 'bad'
-        return ''
+                return "bad"
+        return ""
 
     def _get_stat_highlight(self, stat):
         if str(stat).isdigit():
             if int(stat) >= 10:
-                return 'good'
-        return ''
+                return "good"
+        return ""
     
     def _get_negative_stat_highlight(self, stat):
         if str(stat).isdigit():
             if int(stat) == 0:
-                return 'good'
+                return "good"
             elif int(stat) >= 6:
-                return 'bad'
-        return ''
+                return "bad"
+        return ""
 
     def _get_points_highlight(self, points):
         if str(points).isdigit():
             if int(points) >= 30:
-                return 'good'
-        return ''
+                return "good"
+        return ""
 
 if __name__ == '__main__':
     finder = StatFinder('20200808')
