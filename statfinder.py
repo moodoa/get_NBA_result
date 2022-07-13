@@ -1,168 +1,290 @@
-import re
 import json
-import requests
-import pandas as pd
-
-from bs4 import BeautifulSoup
+import re
 from datetime import datetime, timedelta
 
+import pandas as pd
+import requests
+from requests_html import HTMLSession
+from bs4 import BeautifulSoup
 
-class StatFinder():
-    def __init__(self, date):
+
+class NBAFeeder:
+    def __init__(self):
         self.site_url = "http://www.espn.com"
-        self.date = date
 
-    def receive(self):
-        game_ids = self._get_game_ids()
-        game_tuples = [
-            (game_id, 0)
-            for game_id in game_ids
+        self.team_info = pd.read_csv("NBA_team_name.csv")
+        self.team_info.columns = [
+            "full_name",
+            "abbreviation",
+            "mandarin_name",
+            "mandarin_abbr",
+            "color1",
+            "color2",
         ]
-        all_game_stats = []
-        while len(game_tuples) > 0:
-            game_id, retry_time = game_tuples.pop(0)
-            if retry_time >= 3:
-                continue
-            if self._is_final(game_id):
-                game_stats = self._get_game_stats(game_id)
-                all_game_stats.append(game_stats)
-            else:
-                print((game_id, retry_time + 1))
-                game_tuples.append((game_id, retry_time + 1))
-                continue
-        return all_game_stats
+
+    def _load_team_info(self):
+        team_info = pd.read_csv("./data/NBA_team_name.csv")
+        team_info.columns = [
+            "full_name",
+            "abbreviation",
+            "mandarin_name",
+            "mandarin_abbr",
+            "color1",
+            "color2",
+        ]
+        return team_info
 
     def _get_game_ids(self):
-        content = requests.get(f"{self.site_url}/nba/schedule/_/date/{self.date}").content
-        soup = BeautifulSoup(content,"html.parser")
-        sched_container = soup.find(name="div", attrs={"id":"sched-container"})
-        today_game_id_html = []
-        for tag in sched_container:
-            if len(today_game_id_html) != 0 and tag.name == "h2":
-                break
-            elif tag.attrs == {"class": ["responsive-table-wrap"]}:
-                today_game_id_html.append(tag)
-        game_ids = []
-        for idx in range(len(today_game_id_html)):
-            elements = today_game_id_html[idx].select("a")
-            for element in elements:
-                if "/nba/game?gameId=" in element.attrs["href"]:
-                    game_ids.append(element.attrs["href"].split("=")[1])
+        start_date = self.start_date.strftime("%Y%m%d")
+        data = requests.get(
+            f"https://secure.espn.com/core/nba/schedule/_/date/{start_date}?table=true"
+        ).json()
+        schedule = data["table"].split('<h2 class="table-caption">')[1]
+        pattern = r'href="/nba/game/_/gameId/(\d+)"'
+        game_ids = re.findall(pattern, schedule)
         return game_ids
 
     def _is_final(self, game_id):
         try:
-            content = requests.get(f"{self.site_url}/nba/boxscore?gameId={game_id}").content
-            soup = BeautifulSoup(content, "html.parser")
-            status_detail = soup.find(name="span", attrs={"class":"status-detail"}).text
+            session = HTMLSession()
+            r = session.get(f"https://www.espn.com/nba/boxscore/_/gameId/{game_id}")
+            r.html.render()
+            resp = r.html.raw_html
+            soup = BeautifulSoup(resp, "lxml")
+            status_detail = soup.select_one("div.ScoreCell__Time").text
         except:
             return False
-        return status_detail[:5] == "Final"
+        return status_detail[:5].lower() == "final", soup
 
-    def _get_game_stats(self, game_id):
+    def _get_game_stats(self, game_id, box_soup):
         stat_json = {}
-        content = requests.get(f"{self.site_url}/nba/game?gameId={game_id}").content
-        soup = BeautifulSoup(content, "html.parser")
-        z_time = soup.find(name="div", attrs={"class":"game-date-time"}).span["data-date"]
-        stat_json["game_time"] = z_time
-        away_quarter_score, home_quarter_score = self._get_quarter_score(game_id)
-        
-        url = f"{self.site_url}/nba/boxscore?gameId={game_id}"
-        web = requests.get(url)
-        content = web.content
-        soup = BeautifulSoup(content, "html.parser")
-        html = soup.find(name="div", attrs={"class": "competitors"})
-        game_result = pd.read_html(str(html))[0]
-        col = game_result.columns.to_list()
-        col[0] = "Team"
-        game_result.columns = col
 
-        away = self._team_score_streak(soup, game_result, 0)
-        home = self._team_score_streak(soup, game_result, 1)
-        
-        stat = soup.find(name="div", attrs={"id": "gamepackage-boxscore-module"})
-        for abbr in soup.find_all(name="span", attrs={"class": "abbr"}):
-            abbr.decompose()
-        for position in stat.find_all(name="span", attrs={"class": "position"}):
-            position.insert_before("/")
-        
-        team_away = self._get_team_df(stat, 0)
-        team_home = self._get_team_df(stat, 1)
+        box_soup = box_soup
 
-        away.update({"players": self._set_dnp_starter_status(team_away), "team_score": away_quarter_score})
-        home.update({"players": self._set_dnp_starter_status(team_home), "team_score": home_quarter_score})
+        stat_json["game_time"] = datetime.today().strftime("%Y-%m-%d")
+        stat_json["excerpt"] = f"📢 NBA 戰報 📢"
 
+        away_quarter_score, home_quarter_score = self._get_quarter_score(box_soup)
+
+        two_teams_name = box_soup.select_one("div.Gamestrip__Competitors").select(
+            "div.ScoreCell__TeamName"
+        )
+
+        away = self._team_score_streak(two_teams_name[0].text)
+        home = self._team_score_streak(two_teams_name[1].text)
+
+        team_away = self._get_team_df(box_soup, 0)
+        team_home = self._get_team_df(box_soup, 2)
+
+        away.update(
+            {
+                "players": self._set_dnp_starter_eff_status(team_away),
+                "team_score": away_quarter_score,
+            }
+        )
+        home.update(
+            {
+                "players": self._set_dnp_starter_eff_status(team_home),
+                "team_score": home_quarter_score,
+            }
+        )
         stat_json["away"] = away
         stat_json["home"] = home
-
         return stat_json
 
-    def _get_quarter_score(self, game_id):
-        content = requests.get(f"https://www.espn.com/nba/boxscore?gameId={game_id}").content
-        soup = BeautifulSoup(content,"html.parser")
-        html = soup.find(name="div" , attrs={"class":"game-status"})
+    def _get_stat_excerpt(self, soup, position):
+        player = (
+            soup.select_one("div.GameLeaders__Leaders")
+            .select("span.Athlete__PlayerName")[position]
+            .text
+        )
+        team = (
+            soup.select_one("div.GameLeaders__Leaders")
+            .select("span.Athlete__NameDetails")[position]
+            .text.split("-")[-1]
+            .strip()
+        )
+        points = (
+            soup.select_one("div.GameLeaders__Leaders")
+            .select("span.Athlete__Stats--value")[position * 3]
+            .text
+        )
+        return player, team, points
+
+    def _get_quarter_score(self, box_soup):
+        html = box_soup.find(name="div", attrs={"class": "Table__Scroller"})
         score = pd.read_html(str(html))[0]
-        score = score.rename(columns={"Unnamed: 0":"team","1":"1ST","2":"2ND","3":"3RD","4":"4TH","T":"TOT"})
-        score = score.drop(columns="team")
+        score = score.rename(
+            columns={
+                "Unnamed: 0": "TNT",
+                "1": "1ST",
+                "2": "2ND",
+                "3": "3RD",
+                "4": "4TH",
+                "T": "TOT",
+            }
+        )
+
+        score = score.drop(columns="TNT")
         team_score = json.loads(score.to_json(orient="records"))
-        return team_score[0], team_score[1] 
+        return team_score[0], team_score[1]
 
-    def _team_score_streak(self, soup, game_result, index):
-        streaks = []
-        for record in soup.find_all(name="div", attrs={"class": "record"}):
-            streaks.append(record.text)
-        for streak_idx in range(len(streaks)):
-            if "," in streaks[streak_idx]:
-                streaks[streak_idx] = streaks[streak_idx].split(",")[0]
-
-        abbreviation = game_result.iloc[index].to_list()[0]
-        streak = streaks[index]
+    def _team_score_streak(self, abbr):
+        abbreviation = abbr
+        team_full_name = self.team_info[self.team_info["abbreviation"] == abbreviation][
+            "full_name"
+        ].to_list()[0]
+        mandarin_name = self.team_info[self.team_info["abbreviation"] == abbreviation][
+            "mandarin_name"
+        ].to_list()[0]
+        mandarin_abbr = self.team_info[self.team_info["abbreviation"] == abbreviation][
+            "mandarin_abbr"
+        ].to_list()[0]
+        color1 = self.team_info[self.team_info["abbreviation"] == abbreviation][
+            "color1"
+        ].to_list()[0]
+        color2 = self.team_info[self.team_info["abbreviation"] == abbreviation][
+            "color2"
+        ].to_list()[0]
 
         return {
             "abbreviation": abbreviation,
-            "streak": streak,
+            "team_full_name": team_full_name,
+            "mandarin_name": mandarin_name,
+            "mandarin_abbr": mandarin_abbr,
+            "color1": color1,
+            "color2": color2,
+            "streak": "",
         }
 
-    def _get_team_df(self, stat, idx):
-        team = pd.read_html(str(stat))[idx]
-        column_list = team.columns.tolist()
-        column = []
-        for col_a, col_b in column_list:
-            column.append(col_a)
-        column[0] = "Players"
-        team.columns = column
-        team.fillna("", inplace=True)
-        return team
+    def _get_team_df(self, box_soup, idx):
+        p1 = pd.read_html(str(box_soup.select_one("div.Boxscore")))[idx]
+        d1 = pd.read_html(str(box_soup.select_one("div.Boxscore")))[idx + 1]
+        df = pd.concat([p1, d1], axis=1)
+        df.columns = [str(x) for x in list(df.iloc[0])]
+        df = df[df["MIN"] != "MIN"]
+        if "nan" in df.columns:
+            df.drop(columns="nan", inplace=True)
+        df.rename(columns={"starters": "Players"}, inplace=True)
+        return df
 
-    def _set_dnp_starter_status(self, df):
-        df["Players"] = df["Players"].apply(lambda x: x.split("/")[0])
-        df["DNP"] = df["MIN"].apply(lambda x: True if str(x)[:3]=="DNP" else False)
+    def _set_dnp_starter_eff_status(self, df):
+        # df["Players"] = df["Players"].apply(lambda x: x.split("/")[0])
+        df["DNP"] = df["MIN"].apply(lambda x: True if str(x)[:3] == "DNP" else False)
         starter = df.head(5)["Players"].to_list()
-        df["STARTER"] = df["Players"].apply(lambda x:True if x in starter else False)
+        df["STARTER"] = df["Players"].apply(lambda x: True if x in starter else False)
+        df = self._set_eff(df)
+        df.fillna("", inplace=True)
         df = self._set_highlight(df)
         results = json.loads(df.to_json(orient="records"))
         return results
 
+    def _set_eff(self, df):
+        df["MISS"] = df["FG"].apply(lambda x: self._miss_ball_count(x)) + df[
+            "FT"
+        ].apply(lambda x: self._miss_ball_count(x))
+        eff_df = pd.DataFrame()
+        for col in ["REB", "AST", "STL", "BLK", "PTS", "TO", "MISS"]:
+            series = df[col]
+            eff_df[col] = pd.to_numeric(series, errors="coerce")
+        df["EFF"] = (
+            eff_df["REB"]
+            + eff_df["AST"]
+            + eff_df["BLK"]
+            + eff_df["PTS"]
+            + eff_df["STL"]
+            - eff_df["TO"]
+            - eff_df["MISS"]
+        )
+        df.drop(columns="MISS", inplace=True)
+        df.iloc[(-2, -1)] = ""
+        return df
+
+    def _miss_ball_count(self, ratio):
+        try:
+            attemp = ratio.split("-")[1]
+            made = ratio.split("-")[0]
+            return int(attemp) - int(made)
+        except:
+            return ""
+
     def _set_highlight(self, df):
         players_df = df.iloc[:-2]
         total_df = df.iloc[-2:]
-        for column in ["Players", "MIN", "FG", "3PT", "FT", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "+/-", "PTS"]:
+        for column in players_df.columns:
             if column == "MIN":
-                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":"good"} if str(x).isdigit() and int(x) > 40 else {"text":x, "highlight":""})
+                players_df[column] = players_df[column].apply(
+                    lambda x: {"text": x, "highlight": "good"}
+                    if str(x).isdigit() and int(x) > 40
+                    else {"text": x}
+                )
             elif column == "Players":
-                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._is_triple_double(x, players_df)})
+                players_df[column] = players_df[column].apply(
+                    lambda x: {"text": x}
+                    if self._is_triple_double(x, players_df)
+                    else {"text": x, "highlight": "good"}
+                )
             elif column == "FG":
-                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_fg_highlight(x)})
+                players_df[column] = players_df[column].apply(
+                    lambda x: {"text": x, "highlight": self._get_fg_highlight(x)}
+                    if self._get_fg_highlight(x)
+                    else {"text": x}
+                )
             elif column == "3PT":
-                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_3pt_highlight(x)})
+                players_df[column] = players_df[column].apply(
+                    lambda x: {"text": x, "highlight": self._get_3pt_highlight(x)}
+                    if self._get_3pt_highlight(x)
+                    else {"text": x}
+                )
             elif column == "FT":
-                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_ft_highlight(x)})
+                players_df[column] = players_df[column].apply(
+                    lambda x: {"text": x, "highlight": self._get_ft_highlight(x)}
+                    if self._get_ft_highlight(x)
+                    else {"text": x}
+                )
             elif column in ["OREB", "DREB", "REB", "AST", "STL", "BLK"]:
-                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_stat_highlight(x)})
+                players_df[column] = players_df[column].apply(
+                    lambda x: {"text": x, "highlight": self._get_stat_highlight(x)}
+                    if self._get_stat_highlight(x)
+                    else {"text": x}
+                )
             elif column in ["TO", "PF"]:
-                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_negative_stat_highlight(x)})
+                players_df[column] = players_df[column].apply(
+                    lambda x: {
+                        "text": x,
+                        "highlight": self._get_negative_stat_highlight(x),
+                    }
+                    if self._get_negative_stat_highlight(x)
+                    else {"text": x}
+                )
             elif column == "PTS":
-                players_df[column] = players_df[column].apply(lambda x: {"text":x, "highlight":self._get_points_highlight(x)})
+                players_df[column] = players_df[column].apply(
+                    lambda x: {"text": x, "highlight": self._get_points_highlight(x)}
+                    if self._get_points_highlight(x)
+                    else {"text": x}
+                )
+            elif column == "+/-":
+                players_df[column] = players_df[column].apply(
+                    lambda x: {"text": x, "highlight": self._get_plusminus_highlight(x)}
+                    if self._get_plusminus_highlight(x)
+                    else {"text": x}
+                )
+            elif column == "EFF":
+                players_df[column] = players_df[column].apply(
+                    lambda x: {
+                        "text": self._set_integer_str(x),
+                        "highlight": self._get_eff_highlight(x),
+                    }
+                    if self._get_eff_highlight(x)
+                    else {"text": self._set_integer_str(x)}
+                )
+            elif column in ["DNP", "STARTER"]:
+                pass
+        for column in total_df.columns:
+            if column in ["DNP", "STARTER"]:
+                pass
+            else:
+                total_df[column] = total_df[column].apply(lambda x: {"text": x})
         df = pd.concat([players_df, total_df])
         return df
 
@@ -173,24 +295,20 @@ class StatFinder():
                 positive_stat.append(int(df[df["Players"] == player][column].values[0]))
             except:
                 positive_stat.append(0)
-        count = 0 
+        count = 0
         for stat in positive_stat:
             if stat >= 10:
-                count +=1
-        return "good" if count >= 3 else ""
+                count += 1
+        # 如果未來有大三元需求可在這調整
+        return count >= 3
 
-    def _is_percentage(self, shoot_made_attempted):
-        if shoot_made_attempted[0].isdigit() and "-" in shoot_made_attempted:
-            attempted = int(shoot_made_attempted.split("-")[1])
-            return True if attempted > 0 else False
-    
     def _get_fg_highlight(self, shoot_made_attempted):
         if self._is_percentage(shoot_made_attempted):
             made = int(shoot_made_attempted.split("-")[0])
             attempted = int(shoot_made_attempted.split("-")[1])
-            if made/attempted >= 0.7:
+            if made / attempted >= 0.7:
                 return "good"
-            elif made/attempted < 0.3:
+            elif made / attempted < 0.3:
                 return "bad"
         return ""
 
@@ -198,9 +316,9 @@ class StatFinder():
         if self._is_percentage(shoot_made_attempted):
             made = int(shoot_made_attempted.split("-")[0])
             attempted = int(shoot_made_attempted.split("-")[1])
-            if made/attempted >= 0.5:
+            if made / attempted >= 0.5:
                 return "good"
-            elif made/attempted <= 0.25:
+            elif made / attempted <= 0.25:
                 return "bad"
         return ""
 
@@ -208,32 +326,74 @@ class StatFinder():
         if self._is_percentage(shoot_made_attempted):
             made = int(shoot_made_attempted.split("-")[0])
             attempted = int(shoot_made_attempted.split("-")[1])
-            if made/attempted >= 0.9:
+            if made / attempted >= 0.9:
                 return "good"
-            elif made/attempted <= 0.5:
+            elif made / attempted <= 0.5:
                 return "bad"
         return ""
 
+    def _is_percentage(self, shoot_made_attempted):
+        attempted = 0
+        if shoot_made_attempted[0].isdigit() and "-" in shoot_made_attempted:
+            attempted = int(shoot_made_attempted.split("-")[1])
+        return True if attempted > 0 else False
+
     def _get_stat_highlight(self, stat):
-        if str(stat).isdigit():
-            if int(stat) >= 10:
+        if self._is_number(str(stat)):
+            if float(stat) >= 10:
                 return "good"
         return ""
-    
+
     def _get_negative_stat_highlight(self, stat):
-        if str(stat).isdigit():
-            if int(stat) == 0:
+        if self._is_number(str(stat)):
+            if float(stat) == 0:
                 return "good"
-            elif int(stat) >= 6:
+            elif float(stat) >= 6:
+                return "bad"
+        return ""
+
+    def _get_plusminus_highlight(self, stat):
+        if self._is_number(str(stat)):
+            if float(stat) >= 20:
+                return "good"
+            elif float(stat) <= -20:
                 return "bad"
         return ""
 
     def _get_points_highlight(self, points):
-        if str(points).isdigit():
-            if int(points) >= 30:
+        if self._is_number(str(points)):
+            if float(points) >= 30:
                 return "good"
         return ""
 
+    def _set_integer_str(self, stat):
+        try:
+            if self._is_number(str(stat)):
+                return str(int(stat))
+        except:
+            return stat
+        return stat
+
+    def _get_eff_highlight(self, stat):
+        try:
+            if self._is_number(str(stat)):
+                if float(stat) >= 30:
+                    return "good"
+                elif float(stat) < 0:
+                    return "bad"
+        except:
+            return ""
+        return ""
+
+    def _is_number(self, num):
+        pattern = re.compile(r"^[-+]?[-0-9]\d*\.\d*|[-+]?\.?[0-9]\d*$")
+        result = pattern.match(num)
+        return True if result else False
+
+
 if __name__ == "__main__":
-    finder = StatFinder("20200808")
-    print(finder.receive())
+    bot = NBAFeeder()
+    a, b = bot._is_final(401360442)
+    print(a)
+    stat = bot._get_game_stats(401360442, b)
+    print(stat)
