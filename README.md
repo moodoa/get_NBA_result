@@ -1,5 +1,6 @@
 # Get NBA statistics from ESPN & <br/>Get news from NBA.UDN
-![alt text](https://cdn-images-1.medium.com/max/1000/1*-CPJlm2ql46-_COlSjBx3w.png =100x20)
+
+<img src="https://cdn-images-1.medium.com/max/1000/1*-CPJlm2ql46-_COlSjBx3w.png" width="200">
 
 ## po_dcard_functions
 #### get_NBA_result.py
